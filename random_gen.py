@@ -6,7 +6,7 @@ import dns.resolver
 import re
 
 # Step:1 Generate Email address in this format username@domain.com
-# -Username(role) Part 
+# Username(role) Part 
 locales = ['en_US', 'en_GB', 'fr_FR', 'de_DE', 'it_IT'] # List of available locales for random name generation for personal username
 
 sp_character = ["", ".", "-", "_", "+"]   # username split part
@@ -27,13 +27,15 @@ user_role = [
     'user_experience', 'data_science', 'brand_management'                                                           #bussiness department
 ]   #role and department for bussiness email
 
-# -Domain Platform Part
+# Domain Platform Part
 domains = [
     "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "aol.com", "icloud.com", "zoho.com", "mail.com", 
     "protonmail.com", "yandex.com", "gmx.com", "tutanota.com", "me.com", "live.com", "msn.com", "comcast.net", 
     "att.net", "verizon.net", "bellsouth.net", "me.com", "fastmail.com", "inbox.com", "hushmail.com", "lycos.com", 
-    "mail.ru", "look.com", "webmail.co.za", "tiscali.co.uk", "rocketmail.com", "mailspring.com",
-    "rediffmail.com", "sbcglobal.net", "optonline.net"
+    "mail.ru", "look.com", "webmail.co.za", "tiscali.co.uk", "rocketmail.com", "mailspring.com", "web.de",
+    "rediffmail.com", "sbcglobal.net", "optonline.net", "163.com", "swissmail.com", "freenet.de", "rakuten.jp",
+    "hushmail.com", "runbox.com", "laposte.net", "rediffmail.com", "126.com", "naver.com", "gmx.net", "rocketmail.com",
+    "mail.ru", "yandex.ru", "zoho.com", "yeah.net", "qq.com"
 ]   # Domain platforms for personal user 
 
 business_keywords = [
@@ -60,7 +62,7 @@ country_tlds = [".us", ".ca", ".mx",                                            
     ".mz", ".bw", ".rw", ".na", ".bf", ".ga", ".mg", ".cg", ".cv", ".bj", ".ne", ".lr", ".tg", ".ss", ".sl", ".bi", #Africa
     ".ml", ".mw", ".gq", ".gw", ".so", ".td", ".er", ".mr", ".st", ".km", ".dj", ".sc", ".ly", ".ao", ".zw", ".ls", #Africa
     ".au", ".nz", ".fj", ".pg", ".sb", ".vu", ".to", ".ws", ".as", ".ck", ".tv", ".nf", ".nu", ".ki", ".fm", ".pw"  #Australis and Ocean
-]   # Country name part for bussiness email
+]   # Country name part for bussiness email (tld)
 
 # Email formats
 email_formats = [
@@ -87,7 +89,7 @@ def generate_random_email():
     else:
         first = name_parts[0].lower()
         last = name_parts[1].lower()
-    sp = random.choice(sp_character)    # Special characters 
+    sp = random.choice(sp_character)                # Special characters 
     e_number = random.randint(10, 999)              # Random number for email uniqueness 
     role = random.choice(user_role)                 # username format for business
 
@@ -146,7 +148,7 @@ def smtp_verify(email):
         server.set_debuglevel(0)  # Set to 1 for debugging output
         server.helo()   # sends a HELO command to identify the client to the mail server.
         
-        server.mail('shingomurakami9524@gmail.com')  # Use a valid sender address
+        server.mail('l78482154@gmail.com')  # Use a valid sender address
         code, message = server.rcpt(email)  # Check recipient
         
         server.quit()
