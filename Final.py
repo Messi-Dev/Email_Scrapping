@@ -1,9 +1,15 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import random
 import pandas as pd
 from faker import Faker
 import smtplib
 import dns.resolver
 import re
+import os
+import tkinter as tk
+from tkinter import ttk
+from threading import Thread
 
 # Step:1 Generate Email address in this format username@domain.com
 # Username(role) Part 
@@ -74,65 +80,43 @@ email_formats = [
                                                     # Custom Email Address Template
 ]
 
-# Function to generate a random email
+email_formats = [
+    "{first}{sp}{last}@{domain}",
+    "{first}{sp}{last}@{business}{tld}",
+    "{role}@{business}{tld}"
+]
+
 def generate_random_email():
-
-    # username format
-    random_locale = random.choice(locales)          # Randomly choose a locale
-    fake = Faker(random_locale)                     # Initialize Faker with the chosen locale
-    random_name = fake.name()                       # Generate a random name for every email
-    name_parts = random_name.split()                # Split the name into parts (first and last)
-
-    if len(name_parts) == 1:                        # Split random_name into first and last name for email generation
-        first = name_parts[0].lower()
-        last = ""                                   # No last name
-    else:
-        first = name_parts[0].lower()
-        last = name_parts[1].lower()
-    sp = random.choice(sp_character)                # Special characters 
-    e_number = random.randint(10, 999)              # Random number for email uniqueness 
-    role = random.choice(user_role)                 # username format for business
-
-    # domain format
-    domain = random.choice(domains).lower()         
-    business = random.choice(business_keywords).lower()
-    tld = random.choice(country_tlds).lower()
-
-    # email format   
+    random_locale = random.choice(locales)
+    fake = Faker(random_locale)
+    random_name = fake.name()
+    name_parts = random_name.split()
+    first = name_parts[0].lower()
+    last = name_parts[1].lower() if len(name_parts) > 1 else ""
+    sp = random.choice(sp_character)
+    role = random.choice(user_role)
+    domain = random.choice(domains)
+    business = random.choice(business_keywords)
+    tld = random.choice(country_tlds)
+    
     format_choice = random.choice(email_formats)
-    email = format_choice.format(first=first, last=last, business=business, domain=domain, tld=tld, sp=sp, e_number=e_number, role=role)
+    email = format_choice.format(first=first, last=last, business=business, domain=domain, tld=tld, sp=sp, role=role)
     return {"Generated Email": email}
 
-# Generate multiple emails
-generated_email_data = [generate_random_email() for _ in range(50)]
-
-# Convert to DataFrame
-df_emails = pd.DataFrame(generated_email_data)
-
-# Save to Excel
-output_file = "random_generated_emails.xlsx"
-df_emails.to_excel(output_file, index=False)
-
-# Confirm the process
-print(f"Random generated emails are saved to {output_file}")
-
-
-# Step:2 Verify Email Addresses Using SMTP
-# Email Format Validation is true?
+# Email validation regex
 def is_valid_email(email):
     regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(regex, email)
 
-# MX Record Retrieval of domain platform is valid
+# Get MX record for a domain
 def get_mx_record(domain):
     try:
         mx_records = dns.resolver.resolve(domain, 'MX')
         return str(mx_records[0].exchange)
-    except Exception as e:
-        print(f"MX record lookup failed for {domain}: {e}")
+    except Exception:
         return None
 
-# SMTP Verification of domain and email address
+# SMTP verification function
 def smtp_verify(email):
     if not is_valid_email(email):
         return False
@@ -142,56 +126,104 @@ def smtp_verify(email):
     
     if mx_record is None:
         return False
-
-    try:
-        server = smtplib.SMTP(mx_record)
-        server.set_debuglevel(0)  # Set to 1 for debugging output
-        server.helo()   # sends a HELO command to identify the client to the mail server.
-        
-        server.mail('l78482154@gmail.com')  # Use a valid sender address
-        code, message = server.rcpt(email)  # Check recipient
-        
-        server.quit()
-        
-        return code == 250
     
-    except Exception as e:
-        print(f"Error during verification for {email}: {e}")
+    try:
+        with smtplib.SMTP(mx_record) as server:
+            server.set_debuglevel(0)  # Disable debug output
+            server.helo()
+            server.mail('test@example.com')
+            code, _ = server.rcpt(email)
+            return code == 250
+    except Exception:
         return False
 
-
-# Step:3 Validate Emails and Save Results
-# Validation of email
-def validate_emails(email_list):
-    active_emails = []
-    inactive_emails = []
-
-    for email in email_list:
-        is_active = smtp_verify(email['Generated Email'])
-        if is_active:
-            active_emails.append(email['Generated Email'])
-        else:
-            inactive_emails.append(email['Generated Email'])
-
-    return active_emails, inactive_emails
-
-# Classify active or inactive email and save to excel
+# Save results to Excel file
 def save_results_to_excel(active_emails, inactive_emails):
+    output_dir = r'C:\Users\aoi\Desktop\email nuevo\Email_Scrapping'
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, 'verified_emails.xlsx')
+    
     df_active = pd.DataFrame(active_emails, columns=['Active Emails'])
     df_inactive = pd.DataFrame(inactive_emails, columns=['Inactive Emails'])
 
-    with pd.ExcelWriter('verified_emails.xlsx') as writer:
+    with pd.ExcelWriter(output_path) as writer:
         df_active.to_excel(writer, sheet_name='Active Emails', index=False)
         df_inactive.to_excel(writer, sheet_name='Inactive Emails', index=False)
 
-# Main Execution Block
-if __name__ == "__main__":
-    # Load previously generated emails from Excel or generate new ones
-    df_generated_emails = pd.read_excel("random_generated_emails.xlsx")
-    
-    active_emails, inactive_emails = validate_emails(df_generated_emails.to_dict(orient='records'))
-    
-    save_results_to_excel(active_emails, inactive_emails)
-    
-    print(f"Active emails: {len(active_emails)}, Inactive emails: {len(inactive_emails)}")
+    return output_path
 
+# Asynchronous email verification using threads for faster processing
+def generate_and_verify_emails(progress_label, generated_label, active_label, inactive_label):
+    total_to_generate = 100000
+    generated_emails = []
+    active_emails = []
+    inactive_emails = []
+
+    def verify_email(email_data):
+        email = email_data['Generated Email']
+        generated_emails.append(email)
+
+        is_active = smtp_verify(email)
+        if is_active:
+            active_emails.append(email)
+        else:
+            inactive_emails.append(email)
+
+        # Update UI labels in a thread-safe manner
+        progress_label.config(text=f"Progreso: {len(generated_emails)}/{total_to_generate}")
+        generated_label.config(text=f"Generados: {len(generated_emails)}")
+        active_label.config(text=f"Activos: {len(active_emails)}")
+        inactive_label.config(text=f"Inactivos: {len(inactive_emails)}")
+        
+        progress_label.update()
+        generated_label.update()
+        active_label.update()
+        inactive_label.update()
+
+    # Create threads for each email verification to run concurrently
+    threads = []
+    for _ in range(total_to_generate):
+        email_data = generate_random_email()  # Assume this function generates a random email
+        thread = Thread(target=verify_email, args=(email_data,))
+        threads.append(thread)
+        thread.start()
+
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
+
+    save_results_to_excel(active_emails, inactive_emails)
+    progress_label.config(text="¡Proceso completado!")
+
+# Start the process in a separate thread to keep the UI responsive
+def start_process(progress_label, generated_label, active_label, inactive_label):
+    thread = Thread(target=generate_and_verify_emails, args=(progress_label, generated_label, active_label, inactive_label))
+    thread.start()
+
+# Interfaz Gráfica (GUI)
+def setup_gui():
+    root = tk.Tk()
+    root.title("Generador y Verificador de Emails")
+
+    # Set the size and position of the window
+    root.geometry("400x200+800+400")  # Width x Height + X offset + Y offset
+
+    progress_label = ttk.Label(root, text="Progreso: 0/0", font=("Arial", 12))
+    progress_label.pack(pady=10)
+
+    generated_label = ttk.Label(root, text="Generados: 0", font=("Arial", 12))
+    generated_label.pack(pady=5)
+
+    active_label = ttk.Label(root, text="Activos: 0", font=("Arial", 12))
+    active_label.pack(pady=5)
+
+    inactive_label = ttk.Label(root, text="Inactivos: 0", font=("Arial", 12))
+    inactive_label.pack(pady=5)
+
+    start_button = ttk.Button(root, text="Iniciar", command=lambda: start_process(progress_label, generated_label, active_label, inactive_label))
+    start_button.pack(pady=20)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    setup_gui()
