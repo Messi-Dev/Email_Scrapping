@@ -1,4 +1,3 @@
-import threading
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import random
@@ -11,9 +10,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 from threading import Thread
-
-import time
-from queue import Queue
+from time import sleep
 
 # Step:1 Generate Email address in this format username@domain.com
 # Username(role) Part 
@@ -84,34 +81,30 @@ email_formats = [
                                                     # Custom Email Address Template
 ]
 
+# email_formats = [
+#     "{first}{sp}{last}@{domain}",
+#     "{first}{sp}{last}@{business}{tld}",
+#     "{role}@{business}{tld}"
+# ]
+
 def generate_random_email():
-
-    # username format
-    random_locale = random.choice(locales)          # Randomly choose a locale
-    fake = Faker(random_locale)                     # Initialize Faker with the chosen locale
-    random_name = fake.name()                       # Generate a random name for every email
-    name_parts = random_name.split()                # Split the name into parts (first and last)
-
-    if len(name_parts) == 1:                        # Split random_name into first and last name for email generation
-        first = name_parts[0].lower()
-        last = ""                                   # No last name
-    else:
-        first = name_parts[0].lower()
-        last = name_parts[1].lower()
-    sp = random.choice(sp_character)                # Special characters 
-    e_number = random.randint(10, 999)              # Random number for email uniqueness 
-    role = random.choice(user_role)                 # username format for business
-
-    # domain format
-    domain = random.choice(domains).lower()         
-    business = random.choice(business_keywords).lower()
-    tld = random.choice(country_tlds).lower()
-
-    # email format   
+    random_locale = random.choice(locales)
+    fake = Faker(random_locale)
+    random_name = fake.name()
+    name_parts = random_name.split()
+    first = name_parts[0].lower()
+    last = name_parts[1].lower() if len(name_parts) > 1 else ""
+    sp = random.choice(sp_character)
+    role = random.choice(user_role)
+    domain = random.choice(domains)
+    business = random.choice(business_keywords)
+    tld = random.choice(country_tlds)
+    e_number = random.randint(10, 9999)
+    
     format_choice = random.choice(email_formats)
-    email = format_choice.format(first=first, last=last, business=business, domain=domain, tld=tld, sp=sp, e_number=e_number, role=role)
+    email = format_choice.format(first=first, e_number=e_number, last=last, business=business, domain=domain, tld=tld, sp=sp, role=role)
+    print(f'Generated Email - {email}')
     return {"Generated Email": email}
-
 
 # Email validation regex
 def is_valid_email(email):
@@ -123,7 +116,7 @@ def get_mx_record(domain):
     try:
         mx_records = dns.resolver.resolve(domain, 'MX')
         return str(mx_records[0].exchange)
-    except Exception:
+    except:
         return None
 
 # SMTP verification function
@@ -144,7 +137,7 @@ def smtp_verify(email):
             server.mail('l78482154@gmail.com')
             code, _ = server.rcpt(email)
             return code == 250
-    except Exception:
+    except:
         return False
 
 # Save results to Excel file
@@ -175,6 +168,7 @@ def generate_and_verify_emails(progress_label, generated_label, active_label, in
 
         is_active = smtp_verify(email)
         if is_active:
+            print(f'Activated Email ==================> {email}')
             active_emails.append(email)
         else:
             inactive_emails.append(email)
@@ -193,6 +187,7 @@ def generate_and_verify_emails(progress_label, generated_label, active_label, in
     # Create threads for each email verification to run concurrently
     threads = []
     for _ in range(total_to_generate):
+        sleep(0.05)
         email_data = generate_random_email()  # Assume this function generates a random email
         thread = Thread(target=verify_email, args=(email_data,))
         threads.append(thread)
@@ -210,33 +205,30 @@ def start_process(progress_label, generated_label, active_label, inactive_label)
     thread = Thread(target=generate_and_verify_emails, args=(progress_label, generated_label, active_label, inactive_label))
     thread.start()
 
-
-
 # Interfaz Gráfica (GUI)
-def setup_gui():
-    root = tk.Tk()
-    root.title("Generador y Verificador de Emails")
+def main():
+     root = tk.Tk()
+     root.title("Generador y Verificador de Emails")
     
-    # Set the size and position of the window
-    root.geometry("400x200+800+400")  # Width x Height + X offset + Y offset
+     # Set the size and position of the window
+     root.geometry("400x200+800+400")  # Width x Height + X offset + Y offset
 
-    progress_label = ttk.Label(root, text="Progreso: 0/0", font=("Arial", 12))
-    progress_label.pack(pady=10)
+     progress_label = ttk.Label(root, text="Progreso: 0/0", font=("Arial", 12))
+     progress_label.pack(pady=10)
 
-    generated_label = ttk.Label(root, text="Generados: 0", font=("Arial", 12))
-    generated_label.pack(pady=5)
+     generated_label = ttk.Label(root, text="Generados: 0", font=("Arial", 12))
+     generated_label.pack(pady=5)
 
-    active_label = ttk.Label(root, text="Activos: 0", font=("Arial", 12))
-    active_label.pack(pady=5)
+     active_label = ttk.Label(root, text="Activos: 0", font=("Arial", 12))
+     active_label.pack(pady=5)
 
-    inactive_label = ttk.Label(root, text="Inactivos: 0", font=("Arial", 12))
-    inactive_label.pack(pady=5)
+     inactive_label = ttk.Label(root, text="Inactivos: 0", font=("Arial", 12))
+     inactive_label.pack(pady=5)
 
-    start_button = ttk.Button(root, text="Iniciar", command=lambda: start_process(progress_label, generated_label, active_label, inactive_label))
-    start_button.pack(pady=20)
+     start_button = ttk.Button(root, text="Iniciar", command=lambda: start_process(progress_label, generated_label, active_label, inactive_label))
+     start_button.pack(pady=20)
 
-    root.mainloop()
+     root.mainloop()
 
 if __name__ == "__main__":
-    setup_gui()
-
+    main()
