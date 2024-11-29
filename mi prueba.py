@@ -101,41 +101,34 @@ def generate_random_email():
     email = format_choice.format(first=first, last=last, business=business, domain=domain, tld=tld, sp=sp, role=role)
     return {"Generated Email": email}
 
-# Email validation regex
 def is_valid_email(email):
     regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(regex, email)
 
-# Get MX record for a domain
 def get_mx_record(domain):
     try:
         mx_records = dns.resolver.resolve(domain, 'MX')
         return str(mx_records[0].exchange)
-    except Exception:
+    except:
         return None
 
-# SMTP verification function
 def smtp_verify(email):
     if not is_valid_email(email):
         return False
-    
     domain = email.split('@')[1]
     mx_record = get_mx_record(domain)
-    
     if mx_record is None:
         return False
-    
     try:
-        with smtplib.SMTP(mx_record) as server:
-            server.set_debuglevel(0)  # Disable debug output
-            server.helo()
-            server.mail('test@example.com')
-            code, _ = server.rcpt(email)
-            return code == 250
-    except Exception:
+        server = smtplib.SMTP(mx_record)
+        server.helo()
+        server.mail('test@example.com')
+        code, _ = server.rcpt(email)
+        server.quit()
+        return code == 250
+    except:
         return False
 
-# Save results to Excel file
 def save_results_to_excel(active_emails, inactive_emails):
     output_dir = r'C:\Users\aoi\Desktop\email nuevo\Email_Scrapping'
     os.makedirs(output_dir, exist_ok=True)
@@ -150,50 +143,35 @@ def save_results_to_excel(active_emails, inactive_emails):
 
     return output_path
 
-# Asynchronous email verification using threads for faster processing
 def generate_and_verify_emails(progress_label, generated_label, active_label, inactive_label):
     total_to_generate = 50
     generated_emails = []
     active_emails = []
     inactive_emails = []
 
-    def verify_email(email_data):
-        email = email_data['Generated Email']
-        generated_emails.append(email)
+    for i in range(total_to_generate):
+        email_data = generate_random_email()
+        generated_emails.append(email_data['Generated Email'])
 
-        is_active = smtp_verify(email)
+        is_active = smtp_verify(email_data['Generated Email'])
         if is_active:
-            active_emails.append(email)
+            active_emails.append(email_data['Generated Email'])
         else:
-            inactive_emails.append(email)
+            inactive_emails.append(email_data['Generated Email'])
 
-        # Update UI labels in a thread-safe manner
-        progress_label.config(text=f"Progreso: {len(generated_emails)}/{total_to_generate}")
+        # Actualización en tiempo real
+        progress_label.config(text=f"Progreso: {i + 1}/{total_to_generate}")
         generated_label.config(text=f"Generados: {len(generated_emails)}")
         active_label.config(text=f"Activos: {len(active_emails)}")
         inactive_label.config(text=f"Inactivos: {len(inactive_emails)}")
-        
         progress_label.update()
         generated_label.update()
         active_label.update()
         inactive_label.update()
 
-    # Create threads for each email verification to run concurrently
-    threads = []
-    for _ in range(total_to_generate):
-        email_data = generate_random_email()  # Assume this function generates a random email
-        thread = Thread(target=verify_email, args=(email_data,))
-        threads.append(thread)
-        thread.start()
-
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
-
     save_results_to_excel(active_emails, inactive_emails)
     progress_label.config(text="¡Proceso completado!")
 
-# Start the process in a separate thread to keep the UI responsive
 def start_process(progress_label, generated_label, active_label, inactive_label):
     thread = Thread(target=generate_and_verify_emails, args=(progress_label, generated_label, active_label, inactive_label))
     thread.start()

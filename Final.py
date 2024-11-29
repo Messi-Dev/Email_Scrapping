@@ -131,7 +131,7 @@ def smtp_verify(email):
         with smtplib.SMTP(mx_record) as server:
             server.set_debuglevel(0)  # Disable debug output
             server.helo()
-            server.mail('test@example.com')
+            server.mail('l78482154@gmail.com')
             code, _ = server.rcpt(email)
             return code == 250
     except Exception:
@@ -154,7 +154,7 @@ def save_results_to_excel(active_emails, inactive_emails):
 
 # Asynchronous email verification using threads for faster processing
 def generate_and_verify_emails(progress_label, generated_label, active_label, inactive_label):
-    total_to_generate = 100000
+    total_to_generate = 10000
     generated_emails = []
     active_emails = []
     inactive_emails = []
@@ -204,7 +204,7 @@ def start_process(progress_label, generated_label, active_label, inactive_label)
 def setup_gui():
     root = tk.Tk()
     root.title("Generador y Verificador de Emails")
-
+    
     # Set the size and position of the window
     root.geometry("400x200+800+400")  # Width x Height + X offset + Y offset
 
