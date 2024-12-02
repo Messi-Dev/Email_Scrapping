@@ -99,7 +99,7 @@ def generate_random_email():
         first = name_parts[0].lower()
         last = name_parts[1].lower()
     sp = random.choice(sp_character)                # Special characters 
-    e_number = random.randint(10, 999)              # Random number for email uniqueness 
+    e_number = random.randint(10, 9999)              # Random number for email uniqueness 
     role = random.choice(user_role)                 # username format for business
 
     # domain format
@@ -111,7 +111,6 @@ def generate_random_email():
     format_choice = random.choice(email_formats)
     email = format_choice.format(first=first, last=last, business=business, domain=domain, tld=tld, sp=sp, e_number=e_number, role=role)
     return {"Generated Email": email}
-
 
 # Email validation regex
 def is_valid_email(email):
@@ -210,8 +209,6 @@ def start_process(progress_label, generated_label, active_label, inactive_label)
     thread = Thread(target=generate_and_verify_emails, args=(progress_label, generated_label, active_label, inactive_label))
     thread.start()
 
-
-
 # Interfaz Gráfica (GUI)
 def setup_gui():
     root = tk.Tk()
@@ -239,4 +236,3 @@ def setup_gui():
 
 if __name__ == "__main__":
     setup_gui()
-

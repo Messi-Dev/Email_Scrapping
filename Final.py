@@ -80,12 +80,6 @@ email_formats = [
                                                     # Custom Email Address Template
 ]
 
-email_formats = [
-    "{first}{sp}{last}@{domain}",
-    "{first}{sp}{last}@{business}{tld}",
-    "{role}@{business}{tld}"
-]
-
 def generate_random_email():
     random_locale = random.choice(locales)
     fake = Faker(random_locale)
@@ -100,7 +94,7 @@ def generate_random_email():
     tld = random.choice(country_tlds)
     
     format_choice = random.choice(email_formats)
-    email = format_choice.format(first=first, last=last, business=business, domain=domain, tld=tld, sp=sp, role=role)
+    email = format_choice.format(first=first, last=last, business=business, domain=domain, tld=tld, sp=sp, role=role, enumber=e_number)
     return {"Generated Email": email}
 
 # Email validation regex
